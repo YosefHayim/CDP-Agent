@@ -1,0 +1,28 @@
+---
+description: Load AI instructions from centralized .ai/ structure
+alwaysApply: true
+---
+
+# AI Instructions Loader
+
+**All AI instructions are in `.ai/`** - single source of truth for all AI tools.
+
+## Quick Reference
+
+| Need | Location |
+|------|----------|
+| Standards | `.ai/standards/` |
+| Workflows | `.ai/workflows/` |
+| Patterns | `.ai/patterns/` |
+| Cursor Config | `.ai/tools/cursor.md` |
+| Project Config | `.ai/project/` |
+
+## Before Writing Code
+
+1. Check [code-quality.md](mdc:../.ai/standards/code-quality.md) - Search before creating
+2. Follow patterns in [.ai/patterns/](mdc:../.ai/patterns/index.md)
+3. Track work with Task Master
+
+## Navigation
+
+See [.ai/index.md](mdc:../.ai/index.md) for full documentation.
