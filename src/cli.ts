@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import ora from 'ora';
 import { BrowserBridge } from './browser/index.js';
+import { launchChrome } from './browser/launch.js';
 import { GeminiProtocol } from './browser/protocol.js';
 import type { CliArgs } from './config/cli-args.js';
 import { loadConfig } from './config/loader.js';
@@ -27,6 +28,7 @@ const program = new Command()
   .option('--session <id>', 'Session name/ID (auto-generated if omitted)')
   .option('--config <path>', 'Config file path')
   .option('--cdp-port <port>', 'Chrome debugging port (default: 9222)', parseInt)
+  .option('--launch-chrome', 'Launch Chrome with remote debugging if not running')
   .option('--working-dir <path>', 'Working directory for file operations')
   .option('--check-connection', 'Test CDP connection and exit')
   .option('--list-sessions', 'List available sessions and exit')
@@ -40,6 +42,7 @@ interface CliOptions {
   session?: string;
   config?: string;
   cdpPort?: number;
+  launchChrome?: boolean;
   workingDir?: string;
   checkConnection?: boolean;
   listSessions?: boolean;
@@ -53,6 +56,7 @@ const opts = program.opts<CliOptions>();
 const cliArgs: CliArgs = {
   prompt: opts.prompt,
   port: opts.cdpPort,
+  launchChrome: opts.launchChrome,
   config: opts.config,
   session: opts.session,
   resume: opts.resume,
@@ -126,11 +130,30 @@ function formatConnectionError(err: Error, port: number): string {
 // ── Main ────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
+  const hasCommand = opts.prompt || opts.resume || opts.checkConnection || opts.listSessions;
+  if (!hasCommand) {
+    const { launchTui } = await import('./tui/index.js');
+    await launchTui();
+    return;
+  }
+
   if (opts.checkConnection) {
     const spinner = ora('Connecting to Chrome...').start();
     try {
-      const bridge = new BrowserBridge(config);
-      await bridge.connect();
+      let bridge = new BrowserBridge(config);
+      try {
+        await bridge.connect();
+      } catch (connectErr) {
+        const msg = (connectErr as Error).message;
+        if (config.launchChrome && (msg.includes('Cannot connect') || msg.includes('ECONNREFUSED'))) {
+          spinner.text = 'Launching Chrome...';
+          await launchChrome(config.cdpPort, config.verbose);
+          bridge = new BrowserBridge(config);
+          await bridge.connect();
+        } else {
+          throw connectErr;
+        }
+      }
       spinner.succeed(chalk.green(`Connected to Chrome on port ${config.cdpPort}`));
       console.log(chalk.green('Gemini tab found ✓'));
       await bridge.disconnect();
@@ -188,7 +211,19 @@ async function main(): Promise<void> {
   let bridge: BrowserBridge;
   try {
     bridge = new BrowserBridge(config);
-    await bridge.connect();
+    try {
+      await bridge.connect();
+    } catch (connectErr) {
+      const msg = (connectErr as Error).message;
+      if (config.launchChrome && (msg.includes('Cannot connect') || msg.includes('ECONNREFUSED'))) {
+        spinner.text = 'Launching Chrome...';
+        await launchChrome(config.cdpPort, config.verbose);
+        bridge = new BrowserBridge(config);
+        await bridge.connect();
+      } else {
+        throw connectErr;
+      }
+    }
     spinner.succeed(chalk.green(`Connected to Chrome on port ${config.cdpPort}`));
   } catch (err) {
     spinner.fail(chalk.red('Connection failed'));

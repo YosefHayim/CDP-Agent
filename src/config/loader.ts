@@ -25,6 +25,7 @@ export function loadConfig(cliArgs: CliArgs = {}): AgentConfig {
 
   // Layer 3: CLI args override
   if (cliArgs.port !== undefined) config.cdpPort = cliArgs.port;
+  if (cliArgs.launchChrome !== undefined) config.launchChrome = cliArgs.launchChrome;
   if (cliArgs.maxIterations !== undefined) config.maxIterations = cliArgs.maxIterations;
   if (cliArgs.workingDir !== undefined) config.workingDirectory = resolve(cliArgs.workingDir);
   if (cliArgs.verbose !== undefined) config.verbose = cliArgs.verbose;

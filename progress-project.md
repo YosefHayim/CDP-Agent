@@ -7,7 +7,7 @@
 
 ## Project Overview
 **Project Name**: CDP-Agent
-**Last Updated**: 2026-02-22
+**Last Updated**: 2026-02-23
 **Updated By**: Claude (Sisyphus)
 
 ---
@@ -33,6 +33,11 @@
 - [x] Replaced tool-specific duplicates with minimal loaders - Each tool now has a `_loader` file pointing to `.ai/`
 - [x] Updated root files (AGENTS.md, CLAUDE.md, GEMINI.md) - Now route to `.ai/` structure
 - [x] Archived old files and deleted after verification - Clean repository with no duplication
+
+### 2026-02-23
+
+- [x] Created README.md — Comprehensive project documentation with prerequisites, quick start, usage, configuration, development commands, project structure, how-it-works diagram, and troubleshooting
+- [x] Added --launch-chrome flag — CLI now spawns Chrome with remote debugging when connection fails; uses temp user-data-dir, opens gemini.google.com; platform-specific paths for macOS, Linux, Windows
 
 ### 2026-02-22
 

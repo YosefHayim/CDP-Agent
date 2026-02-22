@@ -1,5 +1,6 @@
 export const DEFAULT_CONFIG = {
   cdpPort: 9222,
+  launchChrome: false,
   maxIterations: 50,
   maxParseFailures: 3,
   shellTimeout: 120000, // 120 seconds

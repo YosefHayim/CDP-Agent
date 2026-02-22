@@ -49,6 +49,7 @@ export interface MemorySummary {
 
 export interface AgentConfig {
   cdpPort: number;
+  launchChrome: boolean;
   maxIterations: number;
   maxParseFailures: number;
   shellTimeout: number;

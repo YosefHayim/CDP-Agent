@@ -3,6 +3,7 @@ import { Command } from 'commander';
 export interface CliArgs {
   prompt?: string;
   port?: number;
+  launchChrome?: boolean;
   config?: string;
   session?: string;
   resume?: string;
@@ -21,6 +22,7 @@ export function parseCliArgs(argv: string[] = process.argv): CliArgs {
     .version('0.1.3')
     .option('--prompt <text>', 'Initial task prompt for the agent')
     .option('--port <number>', 'CDP port number (default: 9222)', parseInt)
+    .option('--launch-chrome', 'Launch Chrome with remote debugging if not running')
     .option('--config <path>', 'Path to custom config file')
     .option('--session <name>', 'Session name for persistence')
     .option('--resume <name>', 'Resume a saved session by name')
@@ -35,6 +37,7 @@ export function parseCliArgs(argv: string[] = process.argv): CliArgs {
   return {
     prompt: opts.prompt,
     port: opts.port,
+    launchChrome: opts.launchChrome,
     config: opts.config,
     session: opts.session,
     resume: opts.resume,

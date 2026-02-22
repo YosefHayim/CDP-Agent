@@ -9,6 +9,7 @@ export {
   findGeminiPage,
   isConnected,
 } from './connection.js';
+export { getChromePath, launchChrome } from './launch.js';
 export {
   extractResponseText,
   findElement,
