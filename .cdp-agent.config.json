@@ -1,0 +1,13 @@
+{
+  "_comment": "CDP Agent configuration file. All fields are optional — defaults shown.",
+  "cdpPort": 9222,
+  "maxIterations": 50,
+  "maxParseFailures": 3,
+  "shellTimeout": 120000,
+  "fileReadMaxSize": 102400,
+  "stabilityThreshold": 3,
+  "stabilityPollingInterval": 500,
+  "workingDirectory": ".",
+  "sessionDir": ".cdp-agent-sessions",
+  "verbose": false
+}
