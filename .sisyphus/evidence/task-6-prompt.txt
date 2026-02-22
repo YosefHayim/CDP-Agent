@@ -1,0 +1,7 @@
+Contains THOUGHT: true
+Contains read_file: true
+Contains search_directory: true
+Contains edit_file: true
+Contains shell: true
+Contains TASK_COMPLETE: true
+Contains TASK_FAILED: true

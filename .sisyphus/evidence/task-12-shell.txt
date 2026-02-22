@@ -1,0 +1,6 @@
+success: true
+output: STDOUT:
+hello world
+
+
+EXIT CODE: 0

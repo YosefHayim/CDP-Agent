@@ -1,0 +1,10 @@
+Selector chains defined:
+export const GEMINI_INPUT: SelectorChain = {
+export const GEMINI_SEND_BUTTON: SelectorChain = {
+export const GEMINI_RESPONSE: SelectorChain = {
+export const GEMINI_THINKING: SelectorChain = {
+export const GEMINI_STOP_BUTTON: SelectorChain = {
+export const GEMINI_LOADING: SelectorChain = {
+
+LSP diagnostics: 0 errors in selectors.ts
+Note: tsc --noEmit fails due to src/config/schema.ts from parallel task, not this file

@@ -1,6 +1,34 @@
 {
+  "name": "cdp-agent",
   "dependencies": {
-    "glob": "^13.0.6"
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "diff": "^8.0.3",
+    "fast-glob": "^3.3.3",
+    "glob": "^13.0.2",
+    "ora": "^9.3.0",
+    "playwright-core": "^1.58.2",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
-  "version": "0.1.4"
+  "version": "0.1.3",
+  "bin": {
+    "cdp-agent": "./src/cli.ts"
+  },
+  "scripts": {
+    "start": "bun run src/cli.ts",
+    "dev": "bun run --watch src/cli.ts",
+    "build": "bun build --compile src/cli.ts --outfile dist/cdp-agent",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "check": "bun run typecheck && bun run lint && bun test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
+    "@types/bun": "^1.3.9",
+    "@types/diff": "^8.0.0",
+    "@types/node": "^25.3.0"
+  }
 }

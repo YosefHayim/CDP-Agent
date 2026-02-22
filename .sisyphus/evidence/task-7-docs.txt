@@ -1,0 +1,5 @@
+Placeholder check:
+No placeholders found
+Bun mentions:
+- **Bun** — JavaScript/TypeScript runtime (native TS execution, fast installs, built-in test runner)
+- **bun test** — Built-in Bun test runner (no Jest/Vitest needed)

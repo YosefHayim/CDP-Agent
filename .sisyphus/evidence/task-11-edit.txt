@@ -1,0 +1,6 @@
+success: true
+output: File patched successfully: test-edit.txt (+1 lines, -1 lines)
+file content: line 1
+line TWO
+line 3
+
