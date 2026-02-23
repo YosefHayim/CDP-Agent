@@ -1,16 +1,18 @@
 // NEVER use single selectors — always use SelectorChain
 
-import type { ElementHandle, Page } from 'playwright-core';
+import type { ElementHandle, Page } from 'puppeteer-core';
 import type { SelectorChain, SelectorHealthResult } from '../types/index.js';
 
 export const GEMINI_INPUT: SelectorChain = {
   name: 'GEMINI_INPUT',
   description: 'Quill editor input field',
   selectors: [
+    '.ql-editor.textarea[contenteditable="true"]',
     '.ql-editor[contenteditable="true"]',
+    'rich-textarea .ql-editor',
     'div.textarea[role="textbox"]',
     'rich-textarea [contenteditable]',
-    '[contenteditable="true"]',
+    '[contenteditable="true"][role="textbox"]',
     'textarea',
   ],
 };
@@ -19,11 +21,12 @@ export const GEMINI_SEND_BUTTON: SelectorChain = {
   name: 'GEMINI_SEND_BUTTON',
   description: 'Send message button',
   selectors: [
+    'button.send-button',
     'button[aria-label*="Send"]',
     'button[aria-label*="send"]',
-    'button.send-button',
+    'button[aria-label*="שליחת"]',
+    'button[aria-label*="enviar"]',
     'button[data-test-id="send-button"]',
-    'button[jsname="Qx7uuf"]',
   ],
 };
 
@@ -48,10 +51,11 @@ export const GEMINI_STOP_BUTTON: SelectorChain = {
   name: 'GEMINI_STOP_BUTTON',
   description: 'Stop generating button (present while streaming)',
   selectors: [
-    'button[aria-label="Stop generating"]',
-    'button[aria-label="Stop response"]',
-    'button[aria-label*="Stop"]',
     'button.stop-button',
+    'button[aria-label*="Stop"]',
+    'button[aria-label*="stop"]',
+    'button[aria-label*="עצירה"]',
+    'button[aria-label*="הפסק"]',
     '.stop-icon',
   ],
 };

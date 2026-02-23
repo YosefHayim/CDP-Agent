@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Page } from 'playwright-core';
+import type { Page } from 'puppeteer-core';
 import type { GeminiProtocol } from '../browser/protocol.js';
 import { parseResponse } from '../engine/parser.js';
 import { ReActLoop } from '../engine/react-loop.js';

@@ -17,16 +17,22 @@ export {
   waitForElement,
 } from './selectors.js';
 
+export interface BridgeOptions {
+  autoCreateGeminiTab?: boolean;
+}
+
 export class BrowserBridge {
   private connection: BrowserConnection | null = null;
   private config: AgentConfig;
+  private options: BridgeOptions;
 
-  constructor(config: AgentConfig) {
+  constructor(config: AgentConfig, options: BridgeOptions = {}) {
     this.config = config;
+    this.options = options;
   }
 
   async connect(): Promise<BrowserConnection> {
-    this.connection = await connect(this.config);
+    this.connection = await connect(this.config, this.options.autoCreateGeminiTab);
     await runHealthCheck(this.connection, this.config.verbose);
     return this.connection;
   }

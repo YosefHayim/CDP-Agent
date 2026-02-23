@@ -4,6 +4,7 @@ import { GeminiProtocol } from '../browser/protocol.js';
 import { loadConfig } from '../config/loader.js';
 import { parseResponse } from '../engine/parser.js';
 import { ReActLoop } from '../engine/react-loop.js';
+import { handleCDPDisconnect } from '../engine/recovery.js';
 import { SessionManager } from '../session/manager.js';
 import { createEditFileTool } from '../tools/edit-file.js';
 import { createReadFileTool } from '../tools/read-file.js';
@@ -15,7 +16,6 @@ import { Logger } from './logger.js';
 import { scanCdpPorts } from './scanner.js';
 
 const DEFAULT_CDP_PORT = 9222;
-const GEMINI_LOAD_DELAY = 4000;
 
 export async function launchTui(): Promise<void> {
   const config = loadConfig();
@@ -40,10 +40,12 @@ export async function launchTui(): Promise<void> {
       },
 
       onSessionSelect: (sessionId) => {
-        if (sessionId) {
-          logger.info(`Session selected: ${sessionId}`);
-          dashboard.log(`{#6a6a8e-fg}Session selected: ${sessionId}{/#6a6a8e-fg}`);
-        }
+        if (!sessionId) return;
+        logger.info(`Session selected: ${sessionId}`);
+        loadSession(sessionId).catch((err: unknown) => {
+          logger.error(`Session load failed: ${(err as Error).message}`);
+          dashboard.log(`{red-fg}Failed to load session: ${(err as Error).message}{/red-fg}`);
+        });
       },
 
       onQuit: async () => {
@@ -57,6 +59,27 @@ export async function launchTui(): Promise<void> {
         }
         dashboard.destroy();
         process.exit(0);
+      },
+
+      onLaunchBrowser: () => {
+        if (isRunning) return;
+        reconnectBrowser().catch((err: unknown) => {
+          logger.error(`Reconnect failed: ${(err as Error).message}`);
+          dashboard.log(`{red-fg}Reconnect failed: ${(err as Error).message}{/red-fg}`);
+        });
+      },
+
+      onNewConversation: () => {
+        if (isRunning) {
+          dashboard.log('{yellow-fg}Cannot start new conversation while agent is running{/yellow-fg}');
+          return;
+        }
+        logger.info('New conversation — clearing output');
+        dashboard.log('');
+        dashboard.log('{#7fdbca-fg}━━━ New conversation ━━━{/#7fdbca-fg}');
+        dashboard.log('');
+        dashboard.setLastAgentResponse('');
+        dashboard.focusPrompt();
       },
     },
     logger,
@@ -86,66 +109,56 @@ export async function launchTui(): Promise<void> {
       logger.info(`Chrome launched on port ${DEFAULT_CDP_PORT}`);
       dashboard.log('{green-fg}✓ Chrome launched{/green-fg}');
 
-      await new Promise((r) => setTimeout(r, GEMINI_LOAD_DELAY));
+      await new Promise((r) => setTimeout(r, 4000));
       instances = await scanCdpPorts();
     } catch (err) {
-      logger.error(`Chrome launch failed: ${(err as Error).message}`);
+      logger.error(`Chrome launch failed: ${(err as Error).message}`, err as Error);
       dashboard.setStatus('{red-fg}✗ Chrome launch failed{/red-fg}');
       dashboard.log(`{red-fg}${(err as Error).message}{/red-fg}`);
       dashboard.log('');
-      dashboard.log('Install Chrome or launch manually:');
-      dashboard.log('  chrome --remote-debugging-port=9222 https://gemini.google.com');
-      return;
+      dashboard.log('Press {#7fdbca-fg}Ctrl+L{/#7fdbca-fg} to launch/reconnect Chrome.');
+      dashboard.setInputEnabled(false);
     }
   }
 
-  // ── Phase 2: Ensure Gemini tab exists ───────────────────────────────
+  // ── Phase 2: Connect (Playwright handles Gemini tab discovery) ──────
 
-  let target = instances.find((i) => i.hasGemini);
-
-  if (!target && instances.length > 0) {
-    const chrome = instances[0];
-    dashboard.log('{yellow-fg}No Gemini tab — opening one…{/yellow-fg}');
-    logger.info(`Opening Gemini tab on port ${chrome.port}`);
-
-    try {
-      await openGeminiTab(chrome.port);
-      await new Promise((r) => setTimeout(r, GEMINI_LOAD_DELAY));
-      const refreshed = await scanCdpPorts();
-      target = refreshed.find((i) => i.hasGemini);
-    } catch (err) {
-      logger.error(`Failed to open Gemini tab: ${(err as Error).message}`);
-    }
-  }
+  const target = instances.find((i) => i.hasGemini) ?? instances[0];
 
   if (!target) {
-    dashboard.setStatus('{red-fg}✗ No Gemini tab{/red-fg}');
-    dashboard.log('{red-fg}Could not find or open a Gemini tab.{/red-fg}');
-    dashboard.log('Open {bold}gemini.google.com{/bold} in Chrome and restart.');
-    return;
+    dashboard.setStatus('{red-fg}✗ No Chrome found{/red-fg}');
+    dashboard.log('{red-fg}Could not find or launch Chrome with CDP.{/red-fg}');
+    dashboard.log('Press {#7fdbca-fg}Ctrl+L{/#7fdbca-fg} to retry.');
+    dashboard.setInputEnabled(false);
+  } else {
+    config.cdpPort = target.port;
+    dashboard.setStatus(`Connecting to Chrome:${target.port}…`);
+    logger.info(`Connecting to Chrome on port ${target.port} (${target.tabs.length} tabs via HTTP)`);
+
+    dashboard.setInputEnabled(false);
+    try {
+      logger.debug(`Connecting to Chrome on port ${target.port}`);
+      dashboard.log(`{#6a6a8e-fg}Connecting via CDP WebSocket…{/#6a6a8e-fg}`);
+      const pending = new BrowserBridge(config, { autoCreateGeminiTab: true });
+      await pending.connect();
+      bridge = pending;
+      logger.debug(`Connected — page URL: ${bridge.getConnection().page.url()}`);
+      dashboard.setStatus(`{green-fg}●{/green-fg} Chrome:${target.port} — Gemini ✓`);
+      dashboard.log('');
+      dashboard.log('{green-fg}✓ Connected to Chrome · Gemini tab ready{/green-fg}');
+      dashboard.setInputEnabled(true);
+      logger.info('Connected');
+    } catch (err) {
+      bridge = null;
+      logger.error(`Connection failed: ${(err as Error).message}`, err as Error);
+      dashboard.setStatus('{red-fg}✗ Connection failed{/red-fg}');
+      dashboard.log(`{red-fg}Error: ${(err as Error).message}{/red-fg}`);
+      dashboard.log('');
+      dashboard.log('Press {#7fdbca-fg}Ctrl+L{/#7fdbca-fg} to retry browser connection.');
+    }
   }
 
-  // ── Phase 3: Connect ────────────────────────────────────────────────
-
-  config.cdpPort = target.port;
-  dashboard.setStatus(`Connecting to Chrome:${target.port}…`);
-  logger.info(`Connecting to Chrome on port ${target.port}`);
-
-  try {
-    bridge = new BrowserBridge(config);
-    await bridge.connect();
-    dashboard.setStatus(`{green-fg}●{/green-fg} Chrome:${target.port} — Gemini ✓`);
-    dashboard.log('');
-    dashboard.log('{green-fg}✓ Connected to Chrome · Gemini tab found{/green-fg}');
-    logger.info('Connected');
-  } catch (err) {
-    logger.error(`Connection failed: ${(err as Error).message}`);
-    dashboard.setStatus('{red-fg}✗ Connection failed{/red-fg}');
-    dashboard.log(`{red-fg}Error: ${(err as Error).message}{/red-fg}`);
-    return;
-  }
-
-  // ── Phase 4: Load sessions & ready ──────────────────────────────────
+  // ── Phase 3: Load sessions & ready ──────────────────────────────────
 
   const sessions = await sessionManager.list();
   dashboard.setSessions(sessions);
@@ -154,9 +167,11 @@ export async function launchTui(): Promise<void> {
     dashboard.log(`{#6a6a8e-fg}${sessions.length} previous session(s) loaded{/#6a6a8e-fg}`);
   }
 
-  dashboard.log('');
-  dashboard.log(`Ready — type a prompt below to begin.  {#6a6a8e-fg}Log: ${logger.path}{/#6a6a8e-fg}`);
-  dashboard.focusPrompt();
+  if (bridge) {
+    dashboard.log('');
+    dashboard.log(`Ready — type a prompt below to begin.  {#6a6a8e-fg}Log: ${logger.path}{/#6a6a8e-fg}`);
+    dashboard.focusPrompt();
+  }
 
   // ── Agent runner ────────────────────────────────────────────────────
 
@@ -211,9 +226,11 @@ export async function launchTui(): Promise<void> {
       if (result.success) {
         logger.info(`Session ${sessionId} complete (${result.steps.length} steps)`);
         dashboard.log(`{green-fg}✓ Complete:{/green-fg} ${result.finalResponse}`);
+        dashboard.setLastAgentResponse(result.finalResponse);
       } else {
         logger.warn(`Session ${sessionId} failed: ${result.reason ?? 'unknown'}`);
         dashboard.log(`{red-fg}✗ Failed:{/red-fg} ${result.reason ?? result.finalResponse}`);
+        dashboard.setLastAgentResponse(result.reason ?? result.finalResponse);
       }
       dashboard.log(`{#6a6a8e-fg}(${result.steps.length} steps){/#6a6a8e-fg}`);
     } catch (err) {
@@ -228,11 +245,99 @@ export async function launchTui(): Promise<void> {
       dashboard.focusPrompt();
     }
   }
-}
 
-async function openGeminiTab(port: number): Promise<void> {
-  const res = await fetch(`http://localhost:${port}/json/new?https://gemini.google.com`, {
-    signal: AbortSignal.timeout(5000),
-  });
-  if (!res.ok) throw new Error(`CDP /json/new returned ${res.status}`);
+  // ── Browser reconnect ─────────────────────────────────────────────
+
+  async function reconnectBrowser(): Promise<void> {
+    logger.info('Reconnecting browser');
+    dashboard.setStatus('Reconnecting…');
+    dashboard.log('{yellow-fg}Reconnecting to Chrome…{/yellow-fg}');
+
+    if (bridge) {
+      try {
+        await handleCDPDisconnect(bridge, config);
+        dashboard.setStatus(`{green-fg}●{/green-fg} Chrome:${config.cdpPort} — Gemini ✓`);
+        dashboard.log('{green-fg}✓ Reconnected to Chrome{/green-fg}');
+        dashboard.setInputEnabled(true);
+        dashboard.focusPrompt();
+        logger.info('Reconnected via handleCDPDisconnect');
+        return;
+      } catch (err) {
+        logger.warn(`handleCDPDisconnect failed: ${(err as Error).message}`);
+      }
+    }
+
+    logger.info('Falling back to full scan + connect');
+    const instances = await scanCdpPorts();
+
+    if (instances.length === 0) {
+      dashboard.log('{yellow-fg}No Chrome found — launching…{/yellow-fg}');
+      await launchChrome(DEFAULT_CDP_PORT, config.verbose);
+      await new Promise((r) => setTimeout(r, 4000));
+    }
+
+    const fresh = await scanCdpPorts();
+    const picked = fresh.find((i) => i.hasGemini) ?? fresh[0];
+
+    if (!picked) {
+      dashboard.setStatus('{red-fg}✗ No Chrome found{/red-fg}');
+      dashboard.log('{red-fg}Could not find or launch Chrome{/red-fg}');
+      return;
+    }
+
+    config.cdpPort = picked.port;
+    const pending = new BrowserBridge(config, { autoCreateGeminiTab: true });
+    await pending.connect();
+    bridge = pending;
+    dashboard.setStatus(`{green-fg}●{/green-fg} Chrome:${picked.port} — Gemini ✓`);
+    dashboard.log('{green-fg}✓ Connected to Chrome{/green-fg}');
+    dashboard.setInputEnabled(true);
+    dashboard.focusPrompt();
+    logger.info(`Reconnected to port ${picked.port}`);
+  }
+
+  // ── Session loader ────────────────────────────────────────────────
+
+  async function loadSession(sessionId: string): Promise<void> {
+    const state = await sessionManager.load(sessionId);
+    if (!state) {
+      dashboard.log(`{red-fg}Session ${sessionId} not found or corrupt{/red-fg}`);
+      return;
+    }
+
+    dashboard.log('');
+    dashboard.log(`{bold}━━━ Session: ${state.id} ━━━{/bold}`);
+    dashboard.log(`{#6a6a8e-fg}Prompt:{/#6a6a8e-fg} ${state.prompt}`);
+    dashboard.log(`{#6a6a8e-fg}Steps: ${state.steps.length}  Created: ${state.createdAt}{/#6a6a8e-fg}`);
+    dashboard.log('');
+
+    for (let i = 0; i < state.steps.length; i++) {
+      const step = state.steps[i];
+      const icon = step.observation.success ? '{green-fg}✓{/green-fg}' : '{red-fg}✗{/red-fg}';
+      dashboard.log(`  {#6a6a8e-fg}[${i + 1}]{/#6a6a8e-fg} {#7fdbca-fg}${step.action.tool}{/#7fdbca-fg} → ${icon}`);
+
+      if (step.thought) {
+        const preview = step.thought.length > 120 ? `${step.thought.slice(0, 117)}…` : step.thought;
+        dashboard.log(`       {#6a6a8e-fg}${preview}{/#6a6a8e-fg}`);
+      }
+
+      if (step.observation.error) {
+        dashboard.log(`       {red-fg}${step.observation.error}{/red-fg}`);
+      }
+    }
+
+    const lastStep = state.steps[state.steps.length - 1];
+    if (lastStep?.observation.output) {
+      const preview =
+        lastStep.observation.output.length > 200
+          ? `${lastStep.observation.output.slice(0, 197)}…`
+          : lastStep.observation.output;
+      dashboard.setLastAgentResponse(preview);
+    }
+
+    dashboard.log('');
+    dashboard.log('{#6a6a8e-fg}End of session history{/#6a6a8e-fg}');
+    dashboard.focusPrompt();
+    logger.info(`Session ${sessionId} loaded (${state.steps.length} steps)`);
+  }
 }

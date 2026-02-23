@@ -1,10 +1,7 @@
-import type { Browser, Page } from 'playwright-core';
-import { chromium } from 'playwright-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import type { Browser, Page } from 'puppeteer-core';
+import puppeteer from 'puppeteer-core';
 import type { AgentConfig, BrowserConnection } from '../types/index.js';
 import { healthCheck } from './selectors.js';
-
-let stealthInitialized = false;
 
 /**
  * Discover the Chrome DevTools WebSocket endpoint from the CDP port.
@@ -34,31 +31,23 @@ export async function discoverEndpoint(port: number): Promise<string> {
 
 /**
  * Connect to an existing Chrome instance via CDP.
- * Initializes stealth plugin to mask automation fingerprints.
+ * Uses puppeteer-core — Playwright's WebSocket transport is incompatible with Bun.
  */
-export async function connect(config: AgentConfig): Promise<BrowserConnection> {
-  if (!stealthInitialized) {
-    chromium.use(StealthPlugin());
-    stealthInitialized = true;
-  }
+export async function connect(config: AgentConfig, autoCreateGeminiTab = false): Promise<BrowserConnection> {
+  const log = config.verbose ? (msg: string) => console.log(`[browser] ${msg}`) : () => {};
 
   const wsUrl = await discoverEndpoint(config.cdpPort);
+  log(`WebSocket URL: ${wsUrl}`);
 
-  if (config.verbose) {
-    console.log(`[browser] Connecting to Chrome at ${wsUrl}`);
+  const browser = await puppeteer.connect({ browserWSEndpoint: wsUrl, protocolTimeout: 15_000 });
+  const allPages = await browser.pages();
+  log(`CDP connected — ${allPages.length} page(s)`);
+  for (const pg of allPages) {
+    log(`  page: ${pg.url()}`);
   }
 
-  const browser = await chromium.connectOverCDP(wsUrl);
-
-  if (config.verbose) {
-    console.log('[browser] CDP connection established');
-  }
-
-  const page = await findGeminiPage(browser);
-
-  if (config.verbose) {
-    console.log(`[browser] Gemini tab found: ${page.url()}`);
-  }
+  const page = await findGeminiPage(browser, autoCreateGeminiTab);
+  log(`Gemini tab ready: ${page.url()}`);
 
   const connection: BrowserConnection = {
     browser,
@@ -78,16 +67,24 @@ export async function connect(config: AgentConfig): Promise<BrowserConnection> {
 
 /**
  * Find the Gemini tab in the connected browser.
- * Searches all contexts and pages for gemini.google.com.
+ * Searches all pages for gemini.google.com.
+ * When autoCreate is true, opens a new Gemini tab if none exists.
  */
-export async function findGeminiPage(browser: Browser): Promise<Page> {
-  for (const ctx of browser.contexts()) {
-    for (const pg of ctx.pages()) {
-      if (pg.url().includes('gemini.google.com')) {
-        return pg;
-      }
+export async function findGeminiPage(browser: Browser, autoCreate = false): Promise<Page> {
+  const allPages = await browser.pages();
+
+  for (const pg of allPages) {
+    if (pg.url().includes('gemini.google.com')) {
+      return pg;
     }
   }
+
+  if (autoCreate) {
+    const page = await browser.newPage();
+    await page.goto('https://gemini.google.com', { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    return page;
+  }
+
   throw new Error('No Gemini tab found. Please open gemini.google.com in Chrome before running cdp-agent.');
 }
 
@@ -97,8 +94,7 @@ export async function findGeminiPage(browser: Browser): Promise<Page> {
 export async function disconnect(connection: BrowserConnection): Promise<void> {
   if (connection.connected) {
     connection.connected = false;
-    // Use close() to disconnect CDP session without closing Chrome
-    await connection.browser.close();
+    connection.browser.disconnect();
   }
 }
 

@@ -38,6 +38,7 @@
 
 - [x] Created README.md — Comprehensive project documentation with prerequisites, quick start, usage, configuration, development commands, project structure, how-it-works diagram, and troubleshooting
 - [x] Added --launch-chrome flag — CLI now spawns Chrome with remote debugging when connection fails; uses temp user-data-dir, opens gemini.google.com; platform-specific paths for macOS, Linux, Windows
+- [x] Logger date/timestamp filenames — Log files now use `cdp-agent-YYYY-MM-DD-HH-mm-ss.log` and `.error.log` instead of fixed `cdp-agent.log` / `cdp-agent.error.log`
 
 ### 2026-02-22
 

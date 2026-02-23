@@ -1,9 +1,9 @@
 // src/types/index.ts
 // Single source of truth for all cdp-agent type definitions
 
-// Browser / DOM types (re-exported from playwright-core)
-type Browser = import('playwright-core').Browser;
-type Page = import('playwright-core').Page;
+// Browser / DOM types (re-exported from puppeteer-core)
+type Browser = import('puppeteer-core').Browser;
+type Page = import('puppeteer-core').Page;
 
 // Tool system
 export interface ToolCall {

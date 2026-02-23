@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core';
+import type { Page } from 'puppeteer-core';
 import type { BrowserBridge } from '../browser/index.js';
 import type { SessionManager } from '../session/manager.js';
 import type { AgentConfig, SessionState } from '../types/index.js';

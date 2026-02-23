@@ -1,7 +1,7 @@
 // src/browser/protocol.ts
 // Gemini page interaction — injection, submission, extraction, completion detection
 
-import type { Page } from 'playwright-core';
+import type { Page } from 'puppeteer-core';
 import type { AgentConfig } from '../types/index.js';
 import {
   extractResponseText,
@@ -28,9 +28,11 @@ export async function injectText(page: Page, text: string): Promise<void> {
       await navigator.clipboard.writeText(t);
     }, text);
     await new Promise((r) => setTimeout(r, 100));
-    await page.keyboard.down('Control');
+    // macOS Chrome uses Cmd+V, Linux/Windows use Ctrl+V
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+    await page.keyboard.down(modifier);
     await page.keyboard.press('v');
-    await page.keyboard.up('Control');
+    await page.keyboard.up(modifier);
     await new Promise((r) => setTimeout(r, 200));
 
     const content = await page.evaluate((selectors: string[]) => {

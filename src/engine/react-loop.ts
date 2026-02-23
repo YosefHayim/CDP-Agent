@@ -1,7 +1,7 @@
 // src/engine/react-loop.ts
 // ReAct loop engine — orchestrates Reason→Act→Observe cycle with Gemini
 
-import type { Page } from 'playwright-core';
+import type { Page } from 'puppeteer-core';
 import type { GeminiProtocol } from '../browser/protocol.js';
 import { buildSystemPrompt } from '../prompts/system-prompt.js';
 import type { SessionManager } from '../session/manager.js';

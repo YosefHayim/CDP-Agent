@@ -1,7 +1,4 @@
 import { spawn } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { discoverEndpoint } from './connection.js';
 
 const CHROME_PATHS: Record<string, string> = {
@@ -38,15 +35,13 @@ async function waitForPort(port: number, timeoutMs: number): Promise<string> {
 
 /**
  * Launch Chrome with remote debugging and wait for CDP to be ready.
- * Uses a temporary user-data-dir so it does not conflict with the user's main Chrome.
+ * Uses the user's default profile so cookies, sessions, and Gemini login persist.
  */
 export async function launchChrome(port: number, verbose = false): Promise<void> {
   const chromePath = getChromePath();
-  const userDataDir = mkdtempSync(join(tmpdir(), 'cdp-agent-chrome-'));
 
   const args = [
     `--remote-debugging-port=${port}`,
-    `--user-data-dir=${userDataDir}`,
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-default-apps',
