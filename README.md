@@ -1,8 +1,31 @@
 # CDP-Agent
 
+<div align="center">
+
+[![CI](https://github.com/YosefHayim/CDP-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/YosefHayim/CDP-Agent/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Contributors Welcome](https://img.shields.io/badge/contributors-welcome-brightgreen.svg)](https://github.com/YosefHayim/CDP-Agent/issues)
+[![Built with Bun](https://img.shields.io/badge/runtime-Bun-black)](https://bun.sh)
+
+</div>
+
+---
+
 **Autonomous coding agent powered by Gemini via Chrome DevTools Protocol**
 
 CDP-Agent connects to an existing Chrome instance with a Gemini tab open, runs a ReAct loop (THOUGHT → ACTION → OBSERVATION), and executes tools—read_file, search_directory, edit_file, shell—to complete coding tasks autonomously.
+
+---
+
+## What is it
+
+CDP-Agent is an autonomous coding agent that bridges your local codebase with the Gemini web interface using Chrome DevTools Protocol. It runs a ReAct loop (THOUGHT → ACTION → OBSERVATION) — reading files, searching directories, editing code, and running shell commands — without requiring an API key or billing account.
+
+---
+
+## Why
+
+Every production-grade AI coding agent requires API keys, billing setup, and rate limits. CDP-Agent was built to give developers a free, browser-based alternative: connect to an already-open Gemini tab via CDP and use it as the reasoning backend — zero token costs, zero API configuration.
 
 ---
 
@@ -158,6 +181,12 @@ flowchart LR
 | "Cannot connect to Chrome" | Launch Chrome with `--remote-debugging-port=9222`, or use `--launch-chrome` |
 | "No Gemini tab found" | Open gemini.google.com in Chrome before running |
 | Session recovery | Use `--list-sessions` then `--resume <id>` |
+
+---
+
+## Contributing
+
+PRs and issues welcome. Fork the repo, create a feature branch, and open a pull request.
 
 ---
 
